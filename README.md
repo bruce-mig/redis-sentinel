@@ -1,5 +1,5 @@
 # redis-cluster 
-**Redis cluster with Docker Compose** 
+**Redis sentinel with Docker Compose** 
 
 Using Docker Compose to setup a redis cluster with sentinel.
 
@@ -17,31 +17,38 @@ git config --global core.autocrlf false
 
 The template defines the topology of the Redis cluster:
 ```yml
-version: '3.9'
-
 services:
-master:
-image: redis:latest
-container_name: redis-master
+  master:
+    image: redis:latest
+    container_name: redis-master
+    networks:
+      - redis-net
 
-slave:
-image: redis:latest
-container_name: redis-slave
-command: redis-server --slaveof redis-master 6379
-depends_on:
-- master
+  slave:
+    image: redis:latest
+    command: redis-server --slaveof redis-master 6379
+    depends_on:
+    - master
+    networks:
+      - redis-net
 
-sentinel:
-build:
-context: ./sentinel
-dockerfile: Dockerfile
-container_name: redis-sentinel
-environment:
-- SENTINEL_DOWN_AFTER=5000
-- SENTINEL_FAILOVER=5000
-depends_on:
-- master
-- slave
+  sentinel:
+    build:
+      context: ./sentinel
+      dockerfile: Dockerfile
+    environment:
+    - SENTINEL_DOWN_AFTER=5000
+    - SENTINEL_FAILOVER=5000
+    depends_on:
+    - master
+    - slave
+    networks:
+      - redis-net
+
+networks:
+  redis-net:
+    driver: bridge
+
 ```
 
 Notes:
